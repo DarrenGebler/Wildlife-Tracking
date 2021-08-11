@@ -1,6 +1,7 @@
-import numpy as np
-from math import sin as sin
 from math import cos as cos
+from math import sin as sin
+
+import numpy as np
 import pymap3d as pm
 
 

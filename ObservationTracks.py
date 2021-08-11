@@ -1,7 +1,11 @@
-from Georeference import GeoReference
-from filterpy.kalman import KalmanFilter
-import numpy as np
 from math import pow
+
+import numpy as np
+from filterpy.kalman import KalmanFilter
+
+from Georeference import GeoReference
+
+gate_threshold = 10
 
 
 def state_transition(delta_t):
@@ -40,8 +44,17 @@ def control(delta_t):
     return g
 
 
-class TrackDetection:
-    def __init__(self, x, y, yaw, pitch, roll, lat, lon, alt):
+def observation_within_gate(predicted_position, observations):
+    within_gate = []
+    for observation in observations:
+        if np.linalg.norm(observation - predicted_position) < gate_threshold:
+            within_gate.append(observation)
+
+    return within_gate
+
+
+class Track:
+    def __init__(self, x, y, yaw, pitch, roll, lat, lon, alt, delta_t):
         """
         Initiates Track Detection class when new object detected.
         Parameters
@@ -54,19 +67,34 @@ class TrackDetection:
         lat : current latitude of drone
         lon : current longitude of drone
         alt : current altitude of drone
+        delta_t : time of detection
         """
         self.geo_reference = GeoReference()
         self.ned_coords = self.geo_reference.calculate_xy_ned(x, y, yaw, pitch, roll, lat, lon, alt)
         self.kalman_filter = KalmanFilter(dim_x=4, dim_z=2)
-        self.kalman_filter_init()
+        self.__kalman_filter_init(delta_t)
 
-    def kalman_filter_init(self):
+    def __kalman_filter_init(self, delta_t):
         """
         Initiates Kalman filter by creating predefined matrices
         """
         self.kalman_filter.x = self.ned_coords[:2]
-        self.kalman_filter.F = state_transition(0.0)
-        self.kalman_filter.B = control(0.0)
+        self.kalman_filter.F = state_transition(delta_t)
+        self.kalman_filter.B = control(delta_t)
+
+    def residual_covariance(self):
+        """
+        Potential calculation required to determine distance to observation. d^2 + ln|{return}|
+
+        Returns
+        -------
+        Residual covariance matrix
+        """
+        h = self.kalman_filter.H
+        p = self.kalman_filter.P
+        r = self.kalman_filter.R
+
+        return h * p * np.transpose(h) + r
 
     def predict_position(self, delta_t):
         """
@@ -82,6 +110,7 @@ class TrackDetection:
         f = state_transition(delta_t)
         b = control(delta_t)
         self.kalman_filter.predict(F=f, B=b)
+
         return self.kalman_filter.x
 
     def update_position(self, x, y, yaw, pitch, roll, lat, lon, alt):
