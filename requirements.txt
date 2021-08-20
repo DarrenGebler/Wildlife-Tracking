@@ -1,3 +1,4 @@
 filterpy
 numpy
 pymap3d
+PyExifTool

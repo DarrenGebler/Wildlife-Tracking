@@ -1,9 +1,11 @@
 import numpy as np
 
-from Georeference import GeoReference
-from ObservationTracks import Track
+from Tracking.utils.Georeference import GeoReference
+from Tracking.utils.ObservationTracks import Track
+from Tracking.HungarianAlgorithm.Hungarian import Hungarian
+from scipy.optimize import linear_sum_assignment
 
-gate_threshold = 10
+gate_threshold = 30000000000000.0
 
 
 def observation_within_gate(predicted_position, observations):
@@ -25,7 +27,7 @@ def observation_within_gate(predicted_position, observations):
         if np.linalg.norm(observation - predicted_position) < gate_threshold:
             within_gate.append(distance)
         else:
-            within_gate.append(100)
+            within_gate.append(30000000000001.0)
 
     return within_gate
 
@@ -96,14 +98,25 @@ class GlobalNearestNeighbour:
         alt : current altitude of drone
         delta_t : time difference
         """
-        if len(self.tracks) == 0:
+        if len(self.tracks) == 0 and len(observations) != 0:
             for observation in observations:
                 self.__add_track(observation, yaw, pitch, roll, lat, lon, alt, delta_t)
+            return
+        elif len(self.tracks) == 0 and len(observations) == 0:
+            return
+        elif len(self.tracks) != 0 and len(observations) == 0:
+            for track in self.tracks:
+                track.predict_position(delta_t)
             return
 
         observations = self.__observations_to_ned(observations, yaw, pitch, roll, lat, lon, alt)
         cost_matrix = np.zeros((len(self.tracks), len(observations)))
 
         for index, track in enumerate(self.tracks):
-            position = track.predict_position(delta_t)
+            position = track.predict_position(delta_t)[:2]
             cost_matrix[index] = observation_within_gate(position, observations)
+
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+        for row, col in zip(row_ind, col_ind):
+            if cost_matrix[row, col] == 30000000000001.0:
+                self.__add_track(observations[row], yaw, pitch, roll, lat, lon, alt, delta_t)
