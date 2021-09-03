@@ -2,10 +2,9 @@ from Tracking import GlobalNearestNeighbour
 import exiftool
 import glob
 import os
-import datetime
 from dateutil.parser import *
 
-folder = "H:/Thesis/Data/2019-08-21_UAS-104_Rockhampton_South/flight3/"
+folder = "H:/Thesis/Data/2019-08-21_UAS-104_Rockhampton_South/flight2/"
 
 
 def date_to_int(str_date):
@@ -59,9 +58,11 @@ if __name__ == '__main__':
     exif_data = get_exif_data()
     det_data = get_detection_data()
     gnn = GlobalNearestNeighbour.GlobalNearestNeighbour()
+    delta_t = exif_data.get(list(exif_data.keys())[0])["time"]
     for index, key in enumerate(exif_data.keys()):
-        if key == "DJI_0283":
-            print()
         gnn.update_tracks(det_data[key], exif_data[key]["yaw"], exif_data[key]["pitch"], exif_data[key]["roll"],
                           exif_data[key]["latitude"], exif_data[key]["longitude"], exif_data[key]["alt"],
-                          exif_data[key]["time"])
+                          exif_data[key]["time"] - delta_t)
+
+    tracks = gnn.get_tracks()
+    print()

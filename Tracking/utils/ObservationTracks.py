@@ -132,5 +132,8 @@ class Track:
         Updated position
         """
         self.ned_coords = self.geo_reference.calculate_xy_ned(x, y, yaw, pitch, roll, lat, lon, alt)
-        self.kalman_filter.update(self.ned_coords[:2])
+        self.kalman_filter.update(self.ned_coords)
         return self.kalman_filter.x
+
+    def get_prior_x(self):
+        return self.kalman_filter.x_prior

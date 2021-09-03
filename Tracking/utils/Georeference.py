@@ -50,7 +50,7 @@ def geodetic_to_ecef(lat, lon, alt):
 
 
 class GeoReference:
-    def __init__(self, scale=1, c_x=320, c_y=256, focal_length=13, pixel_size=0.017):
+    def __init__(self, scale=1/100000000, c_x=320, c_y=256, focal_length=13, pixel_size=0.017):
         """
         Assumes pin hole camera model.
 
